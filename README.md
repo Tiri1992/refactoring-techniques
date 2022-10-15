@@ -10,6 +10,7 @@ You can find the source code of these snipped in the `.code_snippets` folder. I 
 ## Composing methods
 
 ### 1. Extract method
+---
 
 ```python
 import time
@@ -43,6 +44,7 @@ Reason:
 - Allows the higher-level methods to read more like a series of comments
 
 ### 2. Inline method
+---
 
 ```python
 # Bad:
@@ -71,3 +73,294 @@ Reason:
 
 - Indirection is needless, i.e. `is_less_than_zero` is self explanatory
 - When group of methods are badly factored and grouping makes it sufficiently clearer.
+
+### 3. Inline Temp
+---
+
+```python
+class Sales:
+
+    def get_sales(self):
+        pass
+
+sales = Sales()
+
+# Bad 
+def has_exceeded_sales_target():
+    total_sales = sales.get_sales()
+    return total_sales > 1000
+
+# Good
+def has_exceeded_sales_target():
+    return sales.get_sales() > 1000
+
+# Much better
+from enum import IntEnum
+
+class Target(IntEnum):
+    SALES = 1000
+
+
+def has_exceeded_sales_target():
+    return sales.get_sales() > Target.SALES
+```
+
+Reason:
+
+- You have a temp that is assigned to once with a simple expression and the temp variable is getting in the way of other refactorings. 
+- This technique is used with the Query method.
+- Enums can be very powerful for readbility and maintenance instead of using magic numbers.
+
+
+### 4. Replace Temp with Query
+---
+
+```python
+# Bad
+class BatchItem:
+
+    def __init__(self, quantity: int, price: float) -> None:
+        self._quantity = quantity
+        self._price = price
+
+    def get_discount(self):
+        batch_price = self._quantity * self._price
+        if batch_price > 100:
+            return batch_price * 0.95
+        else:
+            return batch_price * 0.98
+    
+# Good: Better to use a query when the computation costs are low
+class BatchItem:
+
+    def __init__(self, quantity: int, price: float) -> None:
+        self._quantity = quantity
+        self._price = price
+
+    def get_batch_price(self):
+        return self._quantity * self._price
+
+    def get_discount(self):
+        if self.get_batch_price() > 100:
+            return self.get_batch_price() * 0.95
+        else:
+            return self.get_batch_price() * 0.98
+```
+
+Reason:
+
+- You are using a temporary variable to hold the result of an expression. By replacing a temp with a query method you are allowing other methods in your class to access the returned value. 
+- This is conditional as long as the expression accessed in the query isn't time consuming.
+
+### 5. Introduce Explaining Variable
+---
+
+```python
+# Bad
+def some_complicated_expression(name: str) -> str:
+    # Lots of WTF's is going on here
+    if name.split("_")[-1].upper().endswith("OS") and name.split("_")[0].upper().startswith("64BIT"):
+        return "Fast mac"
+    elif name.split("_")[-1].upper().endswith("PC") and name.split("_")[0].upper().startswith("32BIT"):
+        return "Slow pc"
+    else:
+        return "Other"
+
+# Good
+def some_complicated_expression(name: str) -> str:
+    # Explaining variables
+    is_mac = name.split("_")[-1].upper() == "OS"
+    is_pc = name.split("_")[-1].upper() == "PC"
+    is_32bit = name.split("_")[0].upper() == "32BIT"
+    is_64bit = name.split("_")[0].upper() == "64BIT"
+    if is_mac and is_64bit:
+        return "Fast mac"
+    elif is_pc and is_32bit:
+        return "Slow pc"
+    else:
+        return "Other"
+```
+
+Reason:
+- When the first words that pop into your mind is "WTF"
+- Expressions can be shortened.
+
+### 6. Split Temporary Variable
+--- 
+
+```python
+# Bad
+class Shape:
+
+    def __init__(self, height: int, width: int) -> None:
+        self._height = height 
+        self._width = width 
+
+    def display(self) -> None:
+        # Confusing as tmp variable has more than one responsibility. I.e. it first calculates perimeter then area.
+        tmp = 2 * (self._height + self._width)
+        print(tmp)
+        tmp = self._height * self._width
+        print(tmp)
+
+
+# Good
+class Shape:
+
+    def __init__(self, height: int, width: int) -> None:
+        self._height = height 
+        self._width = width 
+
+    def display(self) -> None:
+        # Responsibility is clearer.
+        perimeter = 2 * (self._height + self._width)
+        print(f"{perimeter=}")
+        area = self._height * self._width
+        print(f"{area=}")
+
+```
+
+Reason:
+
+- You have a temporary variable assigned to more than once, but it is not a loop variable nor a collecting temporary variable.
+
+### 7. Remove Assignments to Parameters
+---
+
+```python
+# Bad
+def discount(input_value: int, quantity: int) -> int:
+    if input_value > 50:
+        input_value = input_value - 2
+    if quantity > 100:
+        input_value = input_value - 1
+    return input_value
+
+# Better
+def discount(original_input_value: int, quantity: int) -> int:
+    # Split the variable
+    input_value = original_input_value
+    if input_value > 50:
+        input_value = input_value - 2
+    if quantity > 100:
+        input_value = input_value - 1
+    return input_value
+
+# Good: Rename variables to get better names
+def discount(input_value: int, quantity: int) -> int:
+    # Split the variable
+    result = input_value
+    if input_value > 50:
+        result = result - 2
+    if quantity > 100:
+        result = result - 1
+    return result
+```
+
+Reason:
+
+- Its better to assign an input parameter to another parameter if the functions logic modifies its state in any way.
+- The input_value above is used to supply an input to the function and to hold the result for the caller. Makes much more sense to split this variable.
+
+### 8. Replace Method with Method Object: Command Pattern
+
+```python
+from abc import ABC, abstractmethod
+
+# Bad
+def score(candidate, medical_exam, scoring_guide):
+    result = 0
+    health_level = 0
+    high_medical_risk_flag = False 
+
+    if medical_exam.is_smoker:
+        health_level += 10
+        high_medical_risk_flag = True 
+    
+    certification_grade = "regular"
+
+    if scoring_guide.state_with_low_certification(candidate.origin_state):
+        certification_grade = "low"
+        result -= 5
+
+    # Lots more code like this
+    result -= max(health_level - 5, 0)
+    return result
+
+# Good
+class ICommand(ABC):
+
+    @abstractmethod
+    def execute(self):
+        pass 
+
+
+class Scorer(ICommand):
+
+    def __init__(self, candidate, medical_exam, scoring_guide) -> None:
+        # Factored out as instance variables
+        self._candidate = candidate
+        self._medical_exam = medical_exam
+        self._scoring_guide = scoring_guide
+
+    def execute(self):
+        self._result = 0
+        self._health_level = 0
+        self._high_medical_risk_flag = False 
+
+        # Extract method
+        self.score_smoking()
+        
+        certification_grade = "regular"
+
+        # Extract method
+        self.score_based_on_origin(certification_grade)
+
+        # Lots more code like this
+        self._result -= max(self._health_level - 5, 0)
+        return self._result
+
+    def score_smoking(self):
+        if self._medical_exam.is_smoker:
+            self._health_level += 10
+            self._high_medical_risk_flag = True  
+    
+    def score_based_on_origin(self, certification_grade):
+        if self._scoring_guide.state_with_low_certification(self._candidate.origin_state):
+            certification_grade = "low"
+            self._result -= 5
+```
+
+Reason:
+- Greater flexibility for the control an expression of a function than a standard function
+- Commands can have complimentary expressions (i.e. rolling back changes from the command)
+- Additional methods of the object can help facilitate the breakdown of the logic
+
+### 9. Substitution Algorithm
+---
+
+```python
+from typing import Optional
+
+# Bad
+def found_person(people: list[str]) -> str:
+    for i in range(len(people)):
+        if people[i] == "Don":
+            return "Don"
+        if people[i] == "John":
+            return "John"
+        if people[i] == "Kent":
+            return "Kent"
+    return ""
+
+# Good 
+def found_person(people: list[str]) -> Optional[str]:
+    to_identify = {"Don", "John", "Kent"}
+    for name in people:
+        if name in to_identify:
+            return name
+    return None 
+```
+
+Reason:
+- Ideal if you would like to break down a complex algorithm into one that is cleaner and more maintainable.
