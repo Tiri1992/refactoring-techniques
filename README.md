@@ -586,5 +586,5 @@ person.profile.level
 ```
 
 Reason:
-- Sometimes hiding the delegate can become a burden if there are too many and can more overhead for little reward.
+- Sometimes hiding the delegate can become a burden if there are too many and can be more of an overhead for little reward.
 - In these scenarios its better to directly invoke the delegate if there are many attributes being invoked from the client and the api is relatively straight forward and unlikely to change.
