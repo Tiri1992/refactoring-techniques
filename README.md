@@ -366,7 +366,8 @@ Reason:
 - Ideal if you would like to break down a complex algorithm into one that is cleaner and more maintainable.
 
 
-### 10. Extract Class
+### 10. Extract Class
+---
 
 ```python
 # Bad: Needs to be split up, one class is not separating the concerns.
@@ -408,6 +409,7 @@ Reason:
 - Rule of thumb: Consider to split a class when you notice that a subset of data and methods belong together.
 
 ### 11. Inline class
+---
 
 ```python
 # Bad: Redudant class
@@ -436,6 +438,7 @@ Reason:
 - Usually it makes sense to consume this into another class to improve readability
 
 ### 12. Hide delegate
+---
 
 ```python
 # Bad:
@@ -501,6 +504,7 @@ Reason:
 - Making some changes to the delegate object should minimise damage on client code as they do not directly interact with the delegate class.
 
 ### 13. Remove middle man
+---
 
 ```python
 @dataclass
