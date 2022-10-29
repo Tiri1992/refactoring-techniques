@@ -507,6 +507,10 @@ Reason:
 ---
 
 ```python
+from dataclasses import dataclass
+
+
+# Bad: Very contrived example
 @dataclass
 class EmployeeProfile:
 
@@ -550,6 +554,35 @@ person = Person(name="John Doe", profile=employee_profile)
 person.department
 person.manager
 person.level
+
+# Good: Better to directly invoke the delegate
+
+@dataclass
+class EmployeeProfile:
+
+    department: str 
+    salary: int 
+    manager: str 
+    level: int 
+
+
+class Person:
+    
+    def __init__(self, name: str, profile: EmployeeProfile) -> None:
+        self.name = name 
+        self.profile = profile
+
+employee_profile = EmployeeProfile(
+    department="Software Engineer",
+    salary=30000,
+    manager="Jane Thorpe",
+    level=3,
+)
+
+person = Person(name="John Doe", profile=employee_profile)
+person.profile.department
+person.profile.manager
+person.profile.level
 ```
 
 Reason:
