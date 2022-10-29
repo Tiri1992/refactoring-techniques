@@ -364,3 +364,190 @@ def found_person(people: list[str]) -> Optional[str]:
 
 Reason:
 - Ideal if you would like to break down a complex algorithm into one that is cleaner and more maintainable.
+
+
+### 10. Extract Class
+
+```python
+# Bad: Needs to be split up, one class is not separating the concerns.
+class Person:
+
+    def __init__(self, name, office_area_code, office_number) -> None:
+        self._name = name 
+        self._office_area_code = office_area_code
+        self._office_number = office_number
+
+    def get_telephone_number(self):
+        pass 
+
+
+# Good: Using property for more pythonic getter methods. Also, using composition design patterns to expose TelephoneNumber attributes
+
+class TelephoneNumber:
+
+    def __init__(self, area_code, number) -> None:
+        self._area_code = area_code
+        self._number = number 
+
+    @property
+    def number(self):
+        return self._number
+
+class Person:
+
+    def __init__(self, name, telephone_number: TelephoneNumber) -> None:
+        self._name = name
+        self._telphone_number = telephone_number
+
+    def get_telephone_number(self):
+        return self._telphone_number.number
+```
+
+Reason:
+- One class is doing too many things and not adhering to the SRP. Better to decouple. 
+- Rule of thumb: Consider to split a class when you notice that a subset of data and methods belong together.
+
+### 11. Inline class
+
+```python
+# Bad: Redudant class
+
+class Age:
+
+    def __init__(self, age) -> None:
+        self._age = age
+
+class Person:
+
+    def __init__(self, name) -> None:
+        self._name = name 
+
+# Good: Attributes belong together under person class
+
+class Person:
+
+    def __init__(self, name, age) -> None:
+        self._name = name 
+        self._age = age
+```
+
+Reason:
+- Opposite to extract class, where the motivation stems to reduce the redundant classes. 
+- Usually it makes sense to consume this into another class to improve readability
+
+### 12. Hide delegate
+
+```python
+# Bad:
+class Person:
+
+    def __init__(self, name) -> None:
+        self.name = name 
+
+    @property
+    def department(self):
+        return self._department 
+
+    @department.setter
+    def department(self, value):
+        self._department = value 
+
+class Department:
+
+    def __init__(self, charge_code, manager) -> None:
+        self.charge_code = charge_code
+        self.manager = manager 
+
+# Accessing the code now exposes to the client how department class works.
+
+person = Person("John")
+manager = person.department.manager 
+
+# Good: Reduce coupling by hiding department class from client
+
+class Person:
+
+    def __init__(self, name) -> None:
+        self.name = name 
+
+    @property
+    def department(self):
+        return self._department 
+
+    @department.setter
+    def department(self, value):
+        self._department = value 
+
+    @property
+    def manager(self):
+        # acting delegate
+        return self._department.manager
+
+class Department:
+
+    def __init__(self, charge_code, manager) -> None:
+        self.charge_code = charge_code
+        self.manager = manager 
+
+
+# Now clients can access the manager attribute directly from person without having to interact with the Department object.
+person = Person("John")
+person.manager
+```
+
+Reason:
+- Encapsulation means classes should know least as possible about other levels of the system.
+- Clients do not need to know the underline apis the object they are interacting with is also interacting with
+- Making some changes to the delegate object should minimise damage on client code as they do not directly interact with the delegate class.
+
+### 13. Remove middle man
+
+```python
+@dataclass
+class EmployeeProfile:
+
+    department: str 
+    salary: int 
+    manager: str 
+    level: int 
+
+
+class Person:
+    
+    def __init__(self, name: str, profile: EmployeeProfile) -> None:
+        self.name = name 
+        self.profile = profile
+
+    # Overuse of property methods, much work with little gain
+    @property
+    def department(self):
+        return self.profile.department
+
+    @property
+    def salary(self):
+        return self.profile.salary
+
+    @property
+    def manager(self):
+        return self.profile.manager
+    
+    @property
+    def level(self):
+        return self.profile.level
+
+employee_profile = EmployeeProfile(
+    department="Software Engineer",
+    salary=30000,
+    manager="Jane Thorpe",
+    level=3,
+)
+
+person = Person(name="John Doe", profile=employee_profile)
+person.department
+person.manager
+person.level
+```
+
+Reason:
+- Sometimes hiding the delegate can become a burden if there are too many and can more overhead for little reward.
+- In these scenarios its better to directly invoke the delegate if there are many attributes being invoked from the client and the api is relatively straight forward and unlikely to change.
