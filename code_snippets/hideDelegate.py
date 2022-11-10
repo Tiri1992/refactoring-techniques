@@ -12,8 +12,9 @@ the more we understand OOP.
 # Bad:
 class Person:
 
-    def __init__(self, name) -> None:
+    def __init__(self, name, department) -> None:
         self.name = name 
+        self._department = department
 
     @property
     def department(self):
@@ -31,15 +32,16 @@ class Department:
 
 # Accessing the code now exposes to the client how department class works.
 
-person = Person("John")
+person = Person("John", Department("code", "Alex"))
 manager = person.department.manager 
 
 # Good: Reduce coupling by hiding department class from client
 
 class Person:
 
-    def __init__(self, name) -> None:
+    def __init__(self, name, department) -> None:
         self.name = name 
+        self._department = department
 
     @property
     def department(self):
@@ -60,6 +62,6 @@ class Department:
         self.manager = manager 
 
 
-# Now clients can access the manager attribute directly from person without having to interact with the Department class.
-person = Person("John")
+# Now clients can access the manager attribute directly from person without having to interact with the Department object.
+person = Person("John", Department("code", "Alex"))
 person.manager
