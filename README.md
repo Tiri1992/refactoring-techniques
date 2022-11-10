@@ -588,3 +588,71 @@ person.profile.level
 Reason:
 - Sometimes hiding the delegate can become a burden if there are too many and can be more of an overhead for little reward.
 - In these scenarios its better to directly invoke the delegate if there are many attributes being invoked from the client and the api is relatively straight forward and unlikely to change.
+
+### 14. Introduce Foreign Method
+---
+
+```python
+from datetime import datetime
+
+profile = {
+    "name": "John",
+    "id": 1,
+}
+
+
+class User:
+
+    def __init__(self, name, id):
+        self.name = name 
+        self.id = id
+
+# Bad: Assume we can't modify this class in anyway.
+user = User(profile.get("name"), profile.get("id"))
+
+# Good: Adapt the client object to support modification of an instance of the above class. In this case it adds 1 to the id. 
+
+def client(user, profile):
+    return user(profile.get("name"), profile.get("id") + 1)
+
+# Call client
+client(User, profile)
+```
+
+Reason:
+- If a server class is closed for modification we might need to wrap the server object inside a function to modify it return value.
+
+### 15. Introduce Local Extension
+---
+
+```python
+# Bad
+class Human:
+
+    def __init__(self, name, age) -> None:
+        self.name = name
+        self.age = age
+
+def client():
+    employee = Human("John", 25)
+    print(f"Employee profile -> {employee.name}-{employee.age}")
+
+# Good
+class Human:
+
+    def __init__(self, name, age) -> None:
+        self.name = name
+        self.age = age
+
+class Employee(Human):
+
+    def get_profile(self) -> str:
+        return f"{self.name}-{self.age}"
+
+def client():
+    employee = Employee("John", 25)
+    print(f"Employee profile -> {employee.get_profile()}")
+```
+
+Reason:
+- We need to extend the functionality of a given class because we cannot direclty modify the existing class. This could be because the class is imported from some 3rd party library.
